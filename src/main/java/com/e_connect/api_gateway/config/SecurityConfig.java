@@ -1,7 +1,9 @@
 package com.e_connect.api_gateway.config;
 
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.ResponseCookie;
@@ -25,23 +27,28 @@ import reactor.core.publisher.Mono;
 public class SecurityConfig {
 
   private final JWTAuthenticationManager jwtAuthenticationManager;
-  private static final String reactURL = "http://localhost:3000";
 
+  @Value("${cors-url}")
+  private String corsUrl; 
+
+  @Value("${allowable-path-machers}")
+  private String pathMatchers;
   @Bean
   public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    System.out.println(corsUrl);
     http
         .cors(cors -> cors.configurationSource(
             request -> {
               var corsConfiguration = new CorsConfiguration();
-              corsConfiguration.setAllowedOrigins(List.of(reactURL));
-              corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+              corsConfiguration.setAllowedOrigins(Arrays.asList(corsUrl.split(",")));
+              corsConfiguration.setAllowedMethods(
+                  List.of(Constants.GET, Constants.POST, Constants.PUT, Constants.DELETE, Constants.OPTIONS));
               corsConfiguration.setAllowedHeaders(List.of("*"));
               corsConfiguration.setAllowCredentials(true);
               return corsConfiguration;
             }))
         .authorizeExchange(ex -> ex
-            .pathMatchers("/user-service/get-guest-id", "/user-service/grant-guest",
-                "/user-service/login/oauth2/code/google")
+            .pathMatchers(pathMatchers.split(","))
             .permitAll()
             .anyExchange().authenticated())
         .authenticationManager(jwtAuthenticationManager)
@@ -63,10 +70,10 @@ public class SecurityConfig {
       }
       return csrfTokenMono
           .doOnSuccess(token -> {
-            ResponseCookie cookie = ResponseCookie.from("XSRF-TOKEN", token.getToken())
+            ResponseCookie cookie = ResponseCookie.from(Constants.XSRF_TOKEN, token.getToken())
                 .httpOnly(false)
                 .secure(false)
-                .path("/")
+                .path(Constants.FORWARD_SLASH)
                 .maxAge(4000)
                 .build();
             exchange.getResponse().addCookie(cookie);

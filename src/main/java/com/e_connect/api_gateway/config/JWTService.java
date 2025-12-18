@@ -8,6 +8,7 @@ import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
@@ -20,13 +21,14 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class JWTService {
 
-  private static final String SECRETE = "5abcd12345efgh67890ijklmnopqrstu12345685abcd12345efgh67890ijklmnopqrstu1234568";
+  @Value("${jwt-secret}")
+  private String SECRETE;
 
   public String generateToken( String userName, String paswordString, List<String> roles, Boolean isGuest, Long userId) {
     Map<String, Object> claims = new HashMap<>();
-    claims.put("USERNAME", userName);
-    claims.put("PASSWORD", paswordString);
-    claims.put("ROLES", roles);
+    claims.put(Constants.USER_NAME, userName);
+    claims.put(Constants.PASSWORD, paswordString);
+    claims.put(Constants.ROLES, roles);
     return createToken(claims, userName);
   }
 
@@ -45,12 +47,19 @@ public class JWTService {
   }
 
   public String extractUserPassord(String token) {
-    return extractClaim(token, claims -> claims.get("PASSWORD", String.class));
+    return extractClaim(token, claims -> claims.get(Constants.PASSWORD, String.class));
+  }
+
+  public Long extractUserId(String token) {
+    return extractClaim(token, claims -> claims.get(Constants.USER_ID, Long.class));
+  }
+  public Boolean extractGuest(String token) {
+    return extractClaim(token, claims -> claims.get(Constants.IS_GUEST, Boolean.class));
   }
 
   @SuppressWarnings("unchecked")
   public List<String> extractUserRoles(String token) {
-    return (List<String>) extractClaim(token, claims -> claims.get("ROLES"));
+    return (List<String>) extractClaim(token, claims -> claims.get(Constants.ROLES));
   }
 
   private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
